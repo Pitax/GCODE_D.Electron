@@ -128,7 +128,7 @@ connection.onDidChangeConfiguration(change => {
 		documentSettings.clear();
 	} else {
 		globalSettings = <ExampleSettings>(
-			(change.settings.languageServerML|| defaultSettings)
+			(change.settings.languageServergcode|| defaultSettings)
 		);
 	}
 
@@ -144,7 +144,7 @@ function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
 	if (!result) {
 		result = connection.workspace.getConfiguration({
 			scopeUri: resource,
-			section: 'languageServerML'
+			section: 'languageServergcode'
 		});
 		documentSettings.set(resource, result);
 	}
@@ -182,7 +182,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 				end: textDocument.positionAt(m.index + m[0].length)
 			},
 			message: `${m[0]} la variabile non esiste o è scritta male`,
-			source: 'ML Edit'
+			source: 'GCODE Edit'
 		};
 		if (hasDiagnosticRelatedInformationCapability) {
 			diagnostic.relatedInformation = [
@@ -215,8 +215,7 @@ connection.onCompletion(
 		// info and always provide the same completion items.
 		return [
 		//Variabili verso il CNC Zona E
-		{label: 'Testo', kind: CompletionItemKind.Field, detail:'descrizione'},
-	
+		//{label: 'Testo', kind: CompletionItemKind.Field, detail:'descrizione'},
 		];
 	}
 );
@@ -258,7 +257,7 @@ connection.onHover(
 	  let end: number = offset + 1
   
 	  const cursorInfo: CursorInfo = getCursorInfo(text, start, end)
-	  	//Funzioni
+	  	//Funzioni /[a-zA-Z0-9_]/
 		if (cursorInfo.word === 'MC') 
 			{return { contents: 'Invio Comando a Logica PLC'}}
 		else if (cursorInfo.word === 'ZFP') 
@@ -267,6 +266,9 @@ connection.onHover(
 			{return {contents: 'Parametro da logica CNC'}}
 		else if (cursorInfo.word === '!GO') 
 			{return {contents: 'Vai a riga indicata'}}
+	  	//Funzioni G
+		else if (cursorInfo.word === 'G4TT1' || cursorInfo.word === 'G4TT2' || cursorInfo.word === 'G4TT3' || cursorInfo.word === 'G4TT4' || cursorInfo.word === 'G4TT5' || cursorInfo.word === 'G4TT6' || cursorInfo.word === 'G4TT7' || cursorInfo.word === 'G4TT8' || cursorInfo.word === 'G4TT9') 
+		  {return {contents: 'Attendi tempo TT'}}
 		//M Speciali
 		else if (cursorInfo.word === 'M0') 
 			{return {contents: 'Stop'}}

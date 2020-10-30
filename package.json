@@ -1,7 +1,7 @@
 {
 	"name": "gcode-delectron",
-	"displayName": "GCODE D.Electron",
-	"description": "GCODE Language for CNC",
+	"displayName": "G-CODE D.Electron",
+	"description": "G-CODE Language for CNC",
 	"author": "Pitamorsi Francesco",
 	"license": "MIT",
 	"version": "1.1.0",
@@ -29,13 +29,13 @@
 			"type": "object",
 			"title": "GCODE CNC",
 			"properties": {
-				"languageServerML.maxNumberOfProblems": {
+				"languageServergcode.maxNumberOfProblems": {
 					"scope": "resource",
 					"type": "number",
 					"default": 100,
 					"description": "Controls the maximum number of problems produced by the server."
 				},
-				"languageServerML.trace.server": {
+				"languageServergcode.trace.server": {
 					"scope": "window",
 					"type": "string",
 					"enum": [
@@ -65,12 +65,12 @@
 			{
 				"language": "gcode",
 				"scopeName": "source.gcode",
-				"path": "./syntaxes/ml.tmLanguage.json"
+				"path": "./syntaxes/gcode.tmLanguage.json"
 			}
 		],
 		"snippets": [
 			{
-				"language": "ml",
+				"language": "gcode",
 				"path": "./snippets/snippets.code-snippets"
 			}
 		]

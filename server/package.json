@@ -1,6 +1,6 @@
 {
-	"name": "lsp-sample-server",
-	"description": "ML Edit Language Server",
+	"name": "gcode-server",
+	"description": "GCODE Language Server",
 	"version": "1.0.0",
 	"author": "Pitamorsi Francesco",
 	"license": "MIT",
@@ -9,7 +9,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Pitax/ML_Edit"
+		"url": "https://github.com/Pitax/GCODE_D.Electron"
 	},
 	"dependencies": {
 		"vscode-languageserver": "^6.1.1",

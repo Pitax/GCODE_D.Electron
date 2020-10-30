@@ -1,6 +1,6 @@
 {
 	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "GCODE",
+	"name": "gcode",
 	"patterns": 
 	[
 		{
@@ -42,8 +42,8 @@
 		"comment": 
 		{
 			"name": "comment.line.gcode",
-			"begin": "\\(",
-			"end": "\\)"
+			"begin": "\\(|//",
+			"end": "\\)|.*$"
 		},
 		"keywords": 
 		{
@@ -82,7 +82,7 @@
 			},
 			{
 				"name": "entity.other.attribute-name.gcode",
-				"match": "(?i)\\b(azzurro case insensitive)\\b"
+				"match": "\\b(G4TT)\\b"
 			},
 			{
 				"name": "entity.other.inherited-class.gcode",
@@ -94,7 +94,7 @@
 			"patterns": 
 			[{
 				"name": "invalid.gcode",
-				"match": "\\b(rosso)\\b"
+				"match": "(?i)\\b(rosso case insensitive)\\b"
 			}]
 		},
 		"constant": 
@@ -124,7 +124,7 @@
 			"patterns": 
 			[{
 				"name": "storage.gcode",
-				"match": "\\b(F|X|Y|Z|A|C|D|K|N)\\b"
+				"match": "\\b(S|F|X|Y|Z|A|C|D|K|N)\\b"
 			}]
 		},
 		"support": 
@@ -154,7 +154,7 @@
 			"patterns": 
 			[{
 				"name": "variable.language.gcode",
-				"begin": "(X|Y|Z|A|C|D|G4TT|K|N)\\d",
+				"begin": "(S|F|X|Y|Z|A|C|D|K|N)\\d",
 				"end": "\\d*"
 			},
 			{

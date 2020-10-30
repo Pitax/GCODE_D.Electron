@@ -1,13 +1,13 @@
 {
-	"name": "ml-edit",
-	"description": "ML Edit part of a language server",
+	"name": "gcode",
+	"description": "Gcode Edit part of a language server",
 	"author": "Pitamorsi Francesco",
 	"license": "MIT",
 	"version": "0.0.1",
 	"publisher": "vscode",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Pitax/ML_Edit"
+		"url": "https://github.com/Pitax/GCODE_D.Electron"
 	},
 	"engines": {
 		"vscode": "^1.43.0"
