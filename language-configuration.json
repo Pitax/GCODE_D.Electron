@@ -1,7 +1,7 @@
 {
     "comments": {
         // symbol used for single line comment. Remove this entry if your language does not support line comments
-        "lineComment": ";",
+        "blockComment": [ "(", ")" ]
 
     },
     // symbols used as brackets
@@ -30,13 +30,13 @@
     ],
     // "folding": 
     // {
-    //   "markers": {
-    //     "start": "^\\s*//\\s*#?if\\b",
-    //     "end": "^\\s*//\\s*#?end if\\b"
-    // },
+    //     "markers": {
+    //       "start": "^\\s*//\\s*#?--\\b",
+    //       "end": "^\\s*//\\s*#?--\\b"
+    //   },
     "indentationRules": 
     {
-          "increaseIndentPattern": "(?<!(end |End ))\\b(if|Function|else|elseif|Function|Module 24|Module 8|Module 2)\\b",
-          "decreaseIndentPattern": "\\b(end if|else|elseif|End Function|End Module)\\b"
+        "increaseIndentPattern": "\\b(--IF|--DO|--LOOP)\\b",
+        "decreaseIndentPattern": "\\b(--END IF|--ELSEIF|--ELSE|--EXIT DO)\\b"
     }
 }
