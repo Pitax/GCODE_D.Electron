@@ -1,0 +1,19 @@
+{
+	"name": "lsp-sample-server",
+	"description": "ML Edit Language Server",
+	"version": "1.0.0",
+	"author": "Pitamorsi Francesco",
+	"license": "MIT",
+	"engines": {
+		"node": "*"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Pitax/ML_Edit"
+	},
+	"dependencies": {
+		"vscode-languageserver": "^6.1.1",
+		"vscode-languageserver-textdocument": "^1.0.1"
+	},
+	"scripts": {}
+}

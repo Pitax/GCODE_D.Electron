@@ -1,0 +1,22 @@
+{
+	"name": "ml-edit",
+	"description": "ML Edit part of a language server",
+	"author": "Pitamorsi Francesco",
+	"license": "MIT",
+	"version": "0.0.1",
+	"publisher": "vscode",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Pitax/ML_Edit"
+	},
+	"engines": {
+		"vscode": "^1.43.0"
+	},
+	"dependencies": {
+		"vscode-languageclient": "^6.1.3"
+	},
+	"devDependencies": {
+		"@types/vscode": "1.43.0",
+		"vscode-test": "^1.3.0"
+	}
+}

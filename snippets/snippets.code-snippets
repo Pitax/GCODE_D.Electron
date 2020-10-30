@@ -1,0 +1,114 @@
+{
+	"ABS": {
+		"prefix": "ABS",
+		"body": [
+			"ABS(${1:valore})"
+		],
+		"description": "Restituise il valore assoluto"
+		},
+		"AXALARM": {
+		"prefix": "AXALARM",
+		"body": [
+			"AXALARM(${1:numero})"
+		],
+		"description": "Azzera il contatore hardware della scheda asse specificata e quindi mette la scheda in allarme"
+		},
+		"FFOVR": {
+		"prefix": "FFOVR",
+		"body": [
+			"FFOVR((${1:valperc}))"
+		],
+		"description": "Converte un valore percentuale per un override nel corrispondente valore per i bytes degli override 1EL, 1EH, BEL."
+		},
+		"DDFLOINT": {
+		"prefix": "DDFLOINT",
+		"body": [
+			"DDFLOINT(${1:x})"
+		],
+		"description": "Converte X da numero in virgola mobile a numero intero ( da Float a Intero ), se X non e’ un valore intero viene arrotondato all’intero piu’ vicino."
+		},
+		"DDINTFLO": {
+		"prefix": "DDINTFLO",
+		"body": [
+			"DDINTFLO(${1:x})"
+		],
+		"description": "Converte X da numero intero a numero in virgola mobile ( da Intero a Float )."
+		},
+		"MOLDIV": {
+		"prefix": "MOLDIV",
+		"body": [
+			"MOLDIV(${1:moltiplicando1},${2:moltiplicatore2},${3:divisore})"
+		],
+		"description": "Ritorna il valore ottenuto facendo la moltiplicazione tra  moltiplicando 1 e moltiplicatore 2 conprecisione di 64 bit e dividendo il risultato a 64 bit per il divisore."
+		},
+		"FFOUTRIFI": {
+		"prefix": "FFOUTRIFI",
+		"body": [
+			"FFOUTRIFI(${1:riferim},${2:numout},${3:incremento})"
+		],
+		"description": "La funzione consente di generare un riferimento, analogico o digitale, applicando un incremento.\n\rriferim = Valore del riferimento in uscita (+- 27594 max).\n\rnumout = Numero del canale di uscita su cui generare il riferimento:\n\rda 0 a 15 scrittura nell'area T dello Z-Link\n\rda 16 a 31 riferimenti analogici Z-Link\n\rda 32 a 63 scrittura da ZZLINK[160] a ZZLINK[191]\n\rda 64 a 79 scrittura nell'area S dello Z-Link\n\rda 80 a 96 scrittura da ZZLINK[208] a ZZLINK[224]\n\rda 100 a 114 numero asse ZSER (per assi da 0S a 14S)\n\rda 200 a 231 numero asse Z-STAR (per assi da 0H a 31H)\n\rda 300 a 315 numero asse Mechatrolink (per assi da 0M a 15M)\n\rincremento = Incremento del riferimento (valore assoluto sempre positivo)."
+		},
+		"ZZPAL": {
+		"prefix": "ZZPAL",
+		"body": [
+			"ZZPAL(${1:valore512})"
+		],
+		"description": "Stringa corrispondente all'array di ppg da PAL[0] a PAL[512] dedicato alla comunicazione con il plc."
+		},
+		"HHMOTREF": {
+		"prefix": "HHMOTREF",
+		"body": [
+			"HHMOTREF[${1:nlog}]"
+		],
+		"description": "Contiene il riferimento Asse Nlog"
+		},
+		"GGSK": {
+		"prefix": "GGSK",
+		"body": [
+			"GGSK[MENU${1:NUM}].F${2:TASTO}"
+		],
+		"description": "Stato pressione SOFTKEYS"
+		},
+		"PRESS2": {
+		"prefix": "PRESS2",
+		"body": [
+			"PRESS2(${1:STRINGA},0)"
+		],
+		"description": "Invia String MDI"
+		},
+		"WORD8U": {
+			"prefix": "WORD8U",
+			"body": [
+			"{(WORD8U and 0xFFFF) = 0x${1:VALOREMC}}"
+		],
+		"description": "Invia String MDI"
+		},
+		"CNCNEWMC": {
+		"prefix": "CNCNEWMC",
+		"body": [
+			"CNCNEWMC and {(WORD8U and 0xFFFF) = 0x${1:VALOREMC}}"
+		],
+		"description": "Invia String MDI"
+		},
+		"FFCOUPLE": {
+		"prefix": "FFCOUPLE",
+		"body": [
+			"FFCOUPLE(${1:nagg},${2:nslave,,${3:pslave},${4:nmast},${5:pmast},${6:qslave,},${7:qmast}"
+		],
+		"description": "Aggancia Assi in Gantry"
+		},
+		"FFUNCOUPLE": {
+		"prefix": "FFUNCOUPLE",
+		"body": [
+			"FFUNCOUPLE(${1:nagg}"
+		],
+		"description": "Sgancia Assi in Gantry"
+		},
+		"FFSKCOLOR": {
+		"prefix": "FFSKCOLOR",
+		"body": [
+			"FFSKCOLOR(${1:key},${2:menu,,${3:color},${4:processo}"
+		],
+		"description": "Colora Softkeys"
+  }
+}
