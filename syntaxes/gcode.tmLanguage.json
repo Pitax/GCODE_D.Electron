@@ -50,7 +50,7 @@
 			"patterns":
 			[{
 				"name": "keyword.control.gcode",
-				"match": "!|-|\\b(IF|ELSE|ELSEIF|END IF|DO|EXIT DO|LOOP|GO)\\b",
+				"match": "!|-|\\b(IF|ELSE|ELSEIF|END IF|DO|EXIT DO|LOOP|GO|EMAIL)\\b",
 				"begin": "N\\d",
 				"end": "\\!*"	
 			}]
