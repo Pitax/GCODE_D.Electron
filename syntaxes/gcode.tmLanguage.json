@@ -124,7 +124,7 @@
 			"patterns": 
 			[{
 				"name": "storage.gcode",
-				"match": "\\b(S|F|X|Y|Z|A|C|D|K|N)\\b"
+				"match": "\\b(S|F|X|Y|Z|A|C|D|K|N|U|V|W|B|D|KB|KC|VA|VB|VC|VD|VE|VF)\\b"
 			}]
 		},
 		"support": 
@@ -145,7 +145,7 @@
 			},
 			{
 				"name": "support.variable.gcode",
-				"begin": "(G|KA)\\d",
+				"begin": "(G|KA|KB)\\d",
 				"end": "\\d*"
 			}]
 		},
@@ -154,7 +154,7 @@
 			"patterns": 
 			[{
 				"name": "variable.language.gcode",
-				"begin": "(S|F|X|Y|Z|A|C|D|K|N)\\d",
+				"begin": "(S|F|X|Y|Z|A|C|D|K|N|U|V|W|B|D)\\d",
 				"end": "\\d*"
 			},
 			{
