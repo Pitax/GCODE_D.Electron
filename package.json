@@ -51,6 +51,10 @@
 		"languages": [
 			{
 				"id": "gcode",
+				"icon": {
+					"light": "./icon/gcode.png",
+					"dark": "./icon/gcode.png"
+				  },
 				"aliases": [
 					"GCODE",
 					"g-code"
