@@ -266,6 +266,8 @@ connection.onHover(
 			{return {contents: 'Parametro da logica CNC'}}
 		else if (cursorInfo.word === '!GO') 
 			{return {contents: 'Vai a riga indicata'}}
+		else if (cursorInfo.word === 'PAR') 
+			{return {contents: 'Parametro memoria permanente CNC'}}
 	  	//Funzioni G
 		else if (cursorInfo.word === 'G4TT1' || cursorInfo.word === 'G4TT2' || cursorInfo.word === 'G4TT3' || cursorInfo.word === 'G4TT4' || cursorInfo.word === 'G4TT5' || cursorInfo.word === 'G4TT6' || cursorInfo.word === 'G4TT7' || cursorInfo.word === 'G4TT8' || cursorInfo.word === 'G4TT9') 
 		  {return {contents: 'Attendi tempo TT'}}

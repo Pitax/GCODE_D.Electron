@@ -140,7 +140,7 @@
 			},
 			{
 				"name": "support.type.gcode",
-				"begin": "(ZFP|PRM|PAL)",
+				"begin": "(ZFP|PRM|PAL|PAR)",
 				"end": "\\]"
 			},
 			{
