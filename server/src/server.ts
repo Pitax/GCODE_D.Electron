@@ -1,306 +1,244 @@
-import { compileFunction } from 'vm';
 import {
 	createConnection,
 	TextDocuments,
 	Diagnostic,
 	DiagnosticSeverity,
 	ProposedFeatures,
-	InitializeParams,
-	DidChangeConfigurationNotification,
 	CompletionItem,
-	Hover,
 	CompletionItemKind,
+	Hover,
+	MarkupKind,
 	TextDocumentPositionParams,
 	TextDocumentSyncKind,
-	InitializeResult, Range, createClientPipeTransport
-} from 'vscode-languageserver';
+	InitializeResult
+} from 'vscode-languageserver/node';
 
-import {
-	TextDocument
-} from 'vscode-languageserver-textdocument';
+import { TextDocument } from 'vscode-languageserver-textdocument';
 
-//Import per Gestione onHover
-import { CursorInfo} from './common/types'
-const getCursorInfo = (
-	text: string,
-	start: number,
-	end: number
-  ): CursorInfo => {
-	while (start >= 0 && /[a-zA-Z0-9_@]/.test(text[start])) {
-	  start--
+import * as fs from 'fs';
+import * as path from 'path';
+
+const connection = createConnection(ProposedFeatures.all);
+const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
+
+connection.onInitialize((): InitializeResult => ({
+	capabilities: {
+		textDocumentSync: TextDocumentSyncKind.Incremental,
+		completionProvider: { resolveProvider: true },
+		hoverProvider: true
 	}
-  
-	while (end < text.length && /[a-zA-Z0-9_]/.test(text[end])) {
-	  end++
-  
-	  if (text.substr(end - 1, 1) === '(') {
-		return {
-		  type: 'function',
-		  word: text.substr(start + 1, end - start - 1)
-		}
-	  }
-	}
-  
-	return {
-	  type: 'default',
-	  word: text.substr(start + 1, end - start - 1)
-	}
-  }
+}));
 
+// ============================================================================
+// DIZIONARIO: server/data/gcode.json (stesso formato di ML Edit)
+// Unica fonte per completamento e hover.
+// ============================================================================
 
-// Create a connection for the server, using Node's IPC as a transport.
-// Also include all preview / proposed LSP features.
-let connection = createConnection(ProposedFeatures.all);
-
-// Create a simple text document manager. 
-let documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
-
-let hasConfigurationCapability: boolean = false;
-let hasWorkspaceFolderCapability: boolean = false;
-let hasDiagnosticRelatedInformationCapability: boolean = false;
-
-connection.onInitialize((params: InitializeParams) => {
-	let capabilities = params.capabilities;
-
-	// Does the client support the `workspace/configuration` request?
-	// If not, we fall back using global settings.
-	hasConfigurationCapability = !!(
-		capabilities.workspace && !!capabilities.workspace.configuration
-	);
-	hasWorkspaceFolderCapability = !!(
-		capabilities.workspace && !!capabilities.workspace.workspaceFolders
-	);
-	hasDiagnosticRelatedInformationCapability = !!(
-		capabilities.textDocument &&
-		capabilities.textDocument.publishDiagnostics &&
-		capabilities.textDocument.publishDiagnostics.relatedInformation
-	);
-
-	const result: InitializeResult = {
-		capabilities: {
-			textDocumentSync: TextDocumentSyncKind.Incremental,
-			// Tell the client that this server supports code completion.
-			completionProvider: {
-				resolveProvider: true
-			},
-			hoverProvider: true
-		}
-	};
-	if (hasWorkspaceFolderCapability) {
-		result.capabilities.workspace = {
-			workspaceFolders: {
-				supported: true
-			}
-		};
-	}
-	return result;
-});
-
-connection.onInitialized(() => {
-	if (hasConfigurationCapability) {
-		// Register for all configuration changes.
-		connection.client.register(DidChangeConfigurationNotification.type, undefined);
-	}
-	if (hasWorkspaceFolderCapability) {
-		connection.workspace.onDidChangeWorkspaceFolders(_event => {
-			connection.console.log('Workspace folder change event received.');
-		});
-	}
-});
-
-// The example settings
-interface ExampleSettings {
-	maxNumberOfProblems: number;
+interface Voce {
+	nomi: string[];        // il primo e' il nome principale, gli altri alias (es. G0 / G00)
+	gruppo?: string;       // riga mostrata nel completamento
+	kind?: string;         // nome di CompletionItemKind (Function, Keyword, ...)
+	sintassi?: string;     // es. "G4 TT secondi"
+	descrizione?: string;  // una riga, testo dell'hover
+	obsoleta?: boolean;    // esclusa dal completamento, avviso nella diagnostica
 }
 
-// The global settings, used when the `workspace/configuration` request is not supported by the client.
-// Please note that this is not the case when using this server with the client provided in this example
-// but could happen with other clients.
-const defaultSettings: ExampleSettings = { maxNumberOfProblems: 1000 };
-let globalSettings: ExampleSettings = defaultSettings;
+const DATA_FILE = path.join(__dirname, '..', 'data', 'gcode.json');
+const perNome: Map<string, Voce> = new Map();
+const completamento: CompletionItem[] = [];
 
-// Cache the settings of all open documents
-let documentSettings: Map<string, Thenable<ExampleSettings>> = new Map();
-
-connection.onDidChangeConfiguration(change => {
-	if (hasConfigurationCapability) {
-		// Reset all cached document settings
-		documentSettings.clear();
-	} else {
-		globalSettings = <ExampleSettings>(
-			(change.settings.languageServergcode|| defaultSettings)
-		);
+function caricaDizionario(): void {
+	let voci: Voce[] = [];
+	try {
+		voci = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')).voci || [];
+	} catch (e) {
+		connection.console.error(`GCODE: impossibile leggere ${DATA_FILE}: ${(e as Error).message}`);
 	}
-
-	// Revalidate all open text documents
-	documents.all().forEach(validateTextDocument);
-});
-
-function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
-	if (!hasConfigurationCapability) {
-		return Promise.resolve(globalSettings);
+	for (const v of voci) {
+		v.nomi.forEach(n => perNome.set(n.toUpperCase(), v));
+		// '--...' e ':...' solo hover: per inserirli si usano gli snippet
+		if (!v.obsoleta && !/^(--|:)/.test(v.nomi[0])) {
+			completamento.push({
+				label: v.nomi[0],
+				kind: (CompletionItemKind as unknown as { [k: string]: CompletionItemKind })[v.kind || 'Function'],
+				detail: v.gruppo,
+				data: v.nomi[0].toUpperCase()
+			});
+		}
 	}
-	let result = documentSettings.get(resource);
-	if (!result) {
-		result = connection.workspace.getConfiguration({
-			scopeUri: resource,
-			section: 'languageServergcode'
-		});
-		documentSettings.set(resource, result);
-	}
-	return result;
 }
 
-// Only keep settings for open documents
-documents.onDidClose(e => {
-	documentSettings.delete(e.document.uri);
-});
-
-// The content of a text document has changed. This event is emitted
-// when the text document first opened or when its content has changed.
-documents.onDidChangeContent(change => {
-	validateTextDocument(change.document);
-});
-
-async function validateTextDocument(textDocument: TextDocument): Promise<void> {
-	// In this simple example we get the settings for every validate run.
-	let settings = await getDocumentSettings(textDocument.uri);
-
-	// The validator creates diagnostics for all uppercase words length 2 and more
-	let text = textDocument.getText();
-	let pattern = /\b(?=HH)(?!()\b)\w+/g;
-	let m: RegExpExecArray | null;
-
-	let problems = 0;
-	let diagnostics: Diagnostic[] = [];
-	while ((m = pattern.exec(text)) && problems < settings.maxNumberOfProblems) {
-		problems++;
-		let diagnostic: Diagnostic = {
-			severity: DiagnosticSeverity.Error,
-			range: {
-				start: textDocument.positionAt(m.index),
-				end: textDocument.positionAt(m.index + m[0].length)
-			},
-			message: `${m[0]} la variabile non esiste o è scritta male`,
-			source: 'GCODE Edit'
-		};
-		if (hasDiagnosticRelatedInformationCapability) {
-			diagnostic.relatedInformation = [
-				{
-					location: {
-						uri: textDocument.uri,
-						range: Object.assign({}, diagnostic.range)
-					},
-					message: 'Errore Variabile ZSTAR'
-				}
-			];
-		}
-		diagnostics.push(diagnostic);
-	}
-
-	// Send the computed diagnostics to VSCode.
-	connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
+/** Testo semplice -> markdown con escape dei caratteri speciali. */
+function md(text: string): string {
+	return text.replace(/([\\`*_{}[\]<>#|])/g, '\\$1');
 }
 
-connection.onDidChangeWatchedFiles(_change => {
-	// Monitored files have change in VSCode
-	connection.console.log('We received an file change event');
-});
+// Hover / documentazione: nome, sintassi, descrizione
+function documentazione(v: Voce): string {
+	const righe: string[] = [`**${md(v.nomi[0])}**`];
+	if (v.obsoleta) { righe.push('*Obsoleta*'); }
+	if (v.sintassi) { righe.push('`' + v.sintassi + '`'); }
+	if (v.descrizione) { righe.push(md(v.descrizione)); }
+	return righe.join('\n\n');
+}
 
-// This handler provides the initial list of the completion items.
-connection.onCompletion(
-	(_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
-		// The pass parameter contains the position of the text document in
-		// which code complete got requested. For the example we ignore this
-		// info and always provide the same completion items.
-		return [
-		//Variabili verso il CNC Zona E
-		//{label: 'Testo', kind: CompletionItemKind.Field, detail:'descrizione'},
-		];
+// Parole riconosciute nella riga: istruzioni '--', comandi ':', funzioni G, salti GO.., nomi
+const PAROLA = /--\s*(?:END\s*IF|END\s*DEFINE|EXIT\s+DO|ELSE\s*IF|[A-Z]+)|:[A-Z]+|G\s*\d+(?:\.\d+)?|GO\s*(?:DNC|N|P|S)?|[A-Z]+/gi;
+
+// Sostituisce i commenti con spazi (posizioni invariate): ';' a inizio riga o in riga '--',
+// '( )' solo in riga ISO (dopo '!' o dentro '< >' le parentesi sono matematiche)
+function mascheraCommenti(riga: string): string {
+	const strutturata = /^\s*--/.test(riga);
+	let out = '', evoluta = false, espressione = false, commento = false;
+	for (const ch of riga) {
+		if (commento) { out += ' '; commento = ch !== ')'; continue; }
+		if (ch === ';' && (strutturata || out.trim() === '')) { return out.padEnd(riga.length); }
+		if (ch === '(' && !strutturata && !evoluta && !espressione) { out += ' '; commento = true; continue; }
+		evoluta = evoluta || ch === '!';
+		espressione = ch === '<' ? true : ch === '>' ? false : espressione;
+		out += ch;
 	}
-);
+	return out;
+}
 
-// This handler resolves additional information for the item selected in
-// the completion list.
-connection.onCompletionResolve(
-	(item: CompletionItem): CompletionItem => {
-		if (item.data === 1) {item.detail = 'Testo';
-			item.documentation = ('TEsto 2');
-		} else if (item.data === 2) {
-			item.detail = 'Variabili Testo';
-			item.documentation = 'CNC Documentation';
-		} else if (item.data === 3) {
-			item.detail = 'Variabili Testo';
-			item.documentation = 'CNC Documentation';
-		} else if (item.data === 4) {
-			item.detail = 'Variabili Testo';
-			item.documentation = 'CNC Documentation';
-		}		
-		return item;
-	}
-);
+function chiave(parola: string): string {
+	const p = parola.toUpperCase().replace(/\s+/g, '');
+	const g = /^G(\d+(?:\.\d+)?)$/.exec(p);
+	return g ? 'G' + parseFloat(g[1]) : p;   // G00 -> G0, G04 -> G4
+}
 
-//Gestion di onHover
-connection.onHover(
-	(_textDocumentPosition: TextDocumentPositionParams): Hover | undefined => {
-	  const document: TextDocument | undefined = documents.get(_textDocumentPosition.textDocument.uri)
- 	  if (!document) {
-		return {
-		  contents: ''
-		}
-	  }
-  
-	  const text: string = document.getText()
-	  const offset: number = document.offsetAt(_textDocumentPosition.position)
-  
-	  let start: number = offset
-	  let end: number = offset + 1
-  
-	  const cursorInfo: CursorInfo = getCursorInfo(text, start, end)
-	  	//Funzioni /[a-zA-Z0-9_]/
-		if (cursorInfo.word === 'MC') 
-			{return { contents: 'Invio Comando a Logica PLC'}}
-		else if (cursorInfo.word === 'ZFP') 
-			{return {contents: 'Parametro in memoria CNC'}}
-		else if (cursorInfo.word === 'PAL') 
-			{return {contents: 'Parametro da logica CNC'}}
-		else if (cursorInfo.word === '!GO') 
-			{return {contents: 'Vai a riga indicata'}}
-		else if (cursorInfo.word === 'PAR') 
-			{return {contents: 'Parametro memoria permanente CNC'}}
-	  	//Funzioni G
-		else if (cursorInfo.word === 'G4TT1' || cursorInfo.word === 'G4TT2' || cursorInfo.word === 'G4TT3' || cursorInfo.word === 'G4TT4' || cursorInfo.word === 'G4TT5' || cursorInfo.word === 'G4TT6' || cursorInfo.word === 'G4TT7' || cursorInfo.word === 'G4TT8' || cursorInfo.word === 'G4TT9') 
-		  {return {contents: 'Attendi tempo TT'}}
-		//M Speciali
-		else if (cursorInfo.word === 'M0') 
-			{return {contents: 'Stop'}}
-		else if (cursorInfo.word === 'M1') 
-			{return {contents: 'Stop da logica PLC'}}
-		else if (cursorInfo.word === 'M2') 
-			{return {contents: 'Fine Programma'}}
-		else if (cursorInfo.word === 'M3') 
-			{return {contents: 'Start Mandrino Orario'}}
-		else if (cursorInfo.word === 'M4') 
-			{return {contents: 'Start Mandrino Antiorario'}}
-		else if (cursorInfo.word === 'M5') 
-			{return {contents: 'Stop Mandrino'}}
-		else if (cursorInfo.word === 'M6') 
-			{return {contents: 'Cambio Utensile'}}
-		else if (cursorInfo.word === 'M7') 
-			{return {contents: 'Refrigerante Mandrino Interno'}}
-		else if (cursorInfo.word === 'M8') 
-			{return {contents: 'Refrigerante Mandrino Isterno'}}
-		else if (cursorInfo.word === 'M9') 
-			{return {contents: 'Stop Refrigerante Mandrino'}}
-		else if (cursorInfo.word === 'M19') 
-			{return {contents: 'Orientamento Mandrino'}}
-		else 
-			{return {contents: ''}}
+// ============================================================================
+// CONTROLLO ERRORI (passo 4)
+// ============================================================================
+
+// Apertura/chiusura dei blocchi strutturati (M96 p.353-368)
+const STRUTTURA = /^\s*--\s*(ELSE\s*IF|END\s*IF|EXIT\s+DO|END\s*DEFINE|IF|ELSE|DO|LOOP|DEFINE)\b/i;
+const CHIUSURA: { [k: string]: string } = { ENDIF: 'IF', LOOP: 'DO', ENDDEFINE: 'DEFINE' };
+const CHIUSURA_DI: { [k: string]: string } = { IF: '--END IF', DO: '--LOOP', DEFINE: '--END DEFINE' };
+
+function valida(doc: TextDocument): Diagnostic[] {
+	const diagnostics: Diagnostic[] = [];
+	const segnala = (riga: number, inizio: number, fine: number, message: string, severity: DiagnosticSeverity) =>
+		diagnostics.push({ severity, range: { start: { line: riga, character: inizio }, end: { line: riga, character: fine } }, message, source: 'GCODE' });
+
+	const righe = doc.getText().split(/\r?\n/).map(r => mascheraCommenti(r).replace(/"[^"]*"?/g, s => ' '.repeat(s.length)));
+	// il titolo prima di '%' non e' codice
+	const primaRiga = righe.findIndex(r => /^\s*%/.test(r)) + 1;
+
+	// etichette: numeri di riga N (anche /N, //N, %N) e --LN, confronto letterale come il CNC (M96 p.21)
+	const etichette = new Set<string>();
+	righe.forEach(r => {
+		const n = /^\s*(%?\/{0,2}N\s*\d+(?:[.,]\d+)?)/i.exec(r);
+		if (n) { etichette.add(n[1].toUpperCase()); }
+		const ln = /^\s*--\s*LN\s+(\S+)/i.exec(r);
+		if (ln) { etichette.add('LN ' + ln[1].toUpperCase()); }
 	});
-  
-// Make the text document manager listen on the connection
-// for open, change and close text document events
-documents.listen(connection);
 
-// Listen on the connection
+	const pila: { tipo: string; riga: number }[] = [];
+	for (let i = primaRiga; i < righe.length; i++) {
+		const r = righe[i];
+
+		// 1. blocchi strutturati
+		const s = STRUTTURA.exec(r);
+		if (s) {
+			const k = s[1].toUpperCase().replace(/\s+/g, '');
+			const fine = s.index + s[0].length;
+			if (k === 'IF' || k === 'DO' || k === 'DEFINE') {
+				pila.push({ tipo: k, riga: i });
+			} else if (k === 'ELSEIF' || k === 'ELSE') {
+				if (!pila.length || pila[pila.length - 1].tipo !== 'IF') { segnala(i, 0, fine, `--${k} senza --IF`, DiagnosticSeverity.Error); }
+			} else if (k === 'EXITDO') {
+				if (!pila.some(p => p.tipo === 'DO')) { segnala(i, 0, fine, '--EXIT DO fuori da --DO', DiagnosticSeverity.Error); }
+			} else if (pila.length && pila[pila.length - 1].tipo === CHIUSURA[k]) {
+				pila.pop();
+			} else {
+				segnala(i, 0, fine, `${s[0].trim()} senza --${CHIUSURA[k]}`, DiagnosticSeverity.Error);
+			}
+		}
+
+		// 2. parentesi: '(' commento non chiuso (mascherato fino a fine riga), '[ ]' ovunque, '< >' solo in riga ISO
+		const orig = doc.getText({ start: { line: i, character: 0 }, end: { line: i, character: r.length } });
+		const aperta = orig.lastIndexOf('(');
+		if (aperta >= 0 && r[aperta] === ' ' && !orig.includes(')', aperta)) {
+			segnala(i, aperta, r.length, 'Commento "(" non chiuso', DiagnosticSeverity.Error);
+		}
+		const iso = s ? '' : r.split('!')[0];
+		for (const [a, c, testo] of [['[', ']', r], ['<', '>', iso]]) {
+			let livello = 0;
+			for (let j = 0; j < testo.length && livello >= 0; j++) {
+				livello += testo[j] === a ? 1 : testo[j] === c ? -1 : 0;
+				if (livello < 0) { segnala(i, j, j + 1, `"${c}" senza "${a}"`, DiagnosticSeverity.Error); }
+			}
+			if (livello > 0) { segnala(i, testo.lastIndexOf(a), testo.length, `"${a}" non chiusa`, DiagnosticSeverity.Error); }
+		}
+
+		// 3. salti a etichette inesistenti: !GON n!, !GON n1-N n2!, --GOTO LN x (non parametrici)
+		const salti = /(?<=[!;])\s*GO\s*(%?\/{0,2}N[^!;<]*)(?=[!;])|^\s*--\s*GOTO\s+(LN)\s+([^\s<]+)/gi;
+		let m: RegExpExecArray | null;
+		while ((m = salti.exec(r))) {
+			const destinazioni = m[1] ? m[1].split(/-(?=\s*%?\/{0,2}N)/) : [m[2] + ' ' + m[3]];
+			for (const d of destinazioni.map(x => x.trim().toUpperCase())) {
+				if (!etichette.has(d)) {
+					const pos = r.indexOf(d.split(' ').pop() as string, m.index);
+					segnala(i, pos, pos + d.length, `Salto a ${d} inesistente nel file`, DiagnosticSeverity.Warning);
+				}
+			}
+		}
+
+		// 4. funzioni G sconosciute / obsolete (G880-G999: cicli da disco, sempre valide)
+		const g = /(?<![A-Z])G\s*(\d+(?:\.\d+)?)/gi;
+		while ((m = g.exec(r))) {
+			const num = parseFloat(m[1]);
+			const v = perNome.get('G' + num);
+			if (num >= 880 && num <= 999) { continue; }
+			if (!v) {
+				segnala(i, m.index, m.index + m[0].length, `G${num} sconosciuta`, DiagnosticSeverity.Warning);
+			} else if (v.obsoleta) {
+				segnala(i, m.index, m.index + m[0].length, `G${num} obsoleta`, DiagnosticSeverity.Warning);
+			}
+		}
+	}
+	pila.forEach(p => segnala(p.riga, 0, righe[p.riga].length, `--${p.tipo} senza ${CHIUSURA_DI[p.tipo]}`, DiagnosticSeverity.Error));
+	return diagnostics;
+}
+
+documents.onDidChangeContent(change => {
+	connection.sendDiagnostics({ uri: change.document.uri, diagnostics: valida(change.document) });
+});
+
+// ============================================================================
+// COMPLETAMENTO: elenco dal dizionario, documentazione su "resolve"
+// ============================================================================
+
+connection.onCompletion((): CompletionItem[] => completamento);
+
+connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
+	const v = perNome.get(String(item.data));
+	if (v) {
+		item.documentation = { kind: MarkupKind.Markdown, value: documentazione(v) };
+	}
+	return item;
+});
+
+// ============================================================================
+// HOVER
+// ============================================================================
+
+connection.onHover((pos: TextDocumentPositionParams): Hover | undefined => {
+	const document = documents.get(pos.textDocument.uri);
+	if (!document) { return undefined; }
+	const riga = mascheraCommenti(document.getText({ start: { line: pos.position.line, character: 0 }, end: { line: pos.position.line + 1, character: 0 } }));
+	let m: RegExpExecArray | null;
+	PAROLA.lastIndex = 0;
+	while ((m = PAROLA.exec(riga))) {
+		if (pos.position.character >= m.index && pos.position.character < m.index + m[0].length) {
+			const v = perNome.get(chiave(m[0]));
+			return v ? { contents: { kind: MarkupKind.Markdown, value: documentazione(v) } } : undefined;
+		}
+	}
+	return undefined;
+});
+
+caricaDizionario();
+documents.listen(connection);
 connection.listen();

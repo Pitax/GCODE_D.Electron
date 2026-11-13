@@ -1,167 +1,165 @@
 {
 	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
 	"name": "gcode",
-	"patterns": 
-	[
-		{
-			"include": "#comment"
-		},
-		{
-			"include": "#keywords" 
-		},
-		{
-			"include": "#strings" 
-		},
-		{
-			"include": "#entity" 
-		},
-		{
-			"include": "#invalid"
-		},
-		{
-			"include": "#constant"
-		},
-		{
-			"include": "#markup"
-		},
-		{
-			"include": "#meta"
-		},
-		{
-			"include": "#storage"
-		},
-		{
-			"include": "#support"
-		},
-		{
-			"include": "#variable"
-		}
+	"scopeName": "source.gcode",
+	"patterns": [
+		{ "include": "#commentLine" },
+		{ "include": "#structured" },
+		{ "include": "#section" },
+		{ "include": "#blockNumber" },
+		{ "include": "#inline" }
 	],
-	"repository": 
-	{
-		"comment": 
-		{
+	"repository": {
+		"commentLine": {
+			"comment": "';' a inizio riga: tutta la riga è commento (M96 p.23)",
 			"name": "comment.line.gcode",
-			"begin": "\\(|//",
-			"end": "\\)|.*$"
+			"match": "^\\s*;.*$"
 		},
-		"keywords": 
-		{
-			"patterns":
-			[{
-				"name": "keyword.control.gcode",
-				"match": "!|-|\\b(IF|ELSE|ELSEIF|END IF|DO|EXIT DO|LOOP|GO|EMAIL)\\b",
-				"begin": "N\\d",
-				"end": "\\!*"	
-			}]
+		"commentParen": {
+			"comment": "Commento tra parentesi tonde, non annidabile (M96 p.23)",
+			"name": "comment.line.gcode",
+			"match": "\\([^)]*\\)?"
 		},
-		"strings": 
-		{
-			"patterns": 
-			[
+		"structured": {
+			"comment": "Istruzioni strutturate '--' (M96 p.353-368)",
+			"begin": "^\\s*(--)\\s*(ELSE\\s*IF|END\\s*IF|EXIT\\s+DO|END\\s*DEFINE|IF|ELSE|DO|LOOP|GOTO|LN|DEFINE|OUT|WAIT|WRITEL|WRITEC)\\b",
+			"beginCaptures": {
+				"1": { "name": "keyword.control.gcode" },
+				"2": { "name": "keyword.control.gcode" }
+			},
+			"end": "$",
+			"patterns": [
+				{ "name": "comment.line.gcode", "match": ";.*$" },
+				{ "name": "keyword.control.gcode", "match": "\\b(IF|LN|P|S)\\b" },
+				{ "include": "#tokens" }
+			]
+		},
+		"section": {
+			"comment": "Sezioni :OS :PA :TL :n (M96 p.15-19)",
+			"name": "keyword.control.gcode",
+			"match": "^\\s*:(OS|PA|TL|\\d+)\\b"
+		},
+		"blockNumber": {
+			"comment": "Blocco barrato '/', riga in ricerca blocco '//', numero di riga N (M96 p.17-21)",
+			"match": "^\\s*(/{1,2})?\\s*(N\\s*\\d+(?:[.,]\\d+)?)|^\\s*(/{1,2})",
+			"captures": {
+				"1": { "name": "keyword.control.gcode" },
+				"2": { "name": "variable.language.gcode" },
+				"3": { "name": "keyword.control.gcode" }
+			}
+		},
+		"inline": {
+			"patterns": [
+				{ "include": "#commentParen" },
+				{ "include": "#evolved" },
+				{ "include": "#expression" },
+				{ "include": "#tokens" }
+			]
+		},
+		"expression": {
+			"comment": "Espressione <...> in riga ISO: le parentesi tonde sono matematiche, non commenti (M96 p.247)",
+			"begin": "<",
+			"beginCaptures": { "0": { "name": "entity.name.function.bracket.gcode" } },
+			"end": ">|$",
+			"endCaptures": { "0": { "name": "entity.name.function.bracket.gcode" } },
+			"patterns": [ { "include": "#tokens" } ]
+		},
+		"tokens": {
+			"patterns": [
+				{ "include": "#array" },
+				{ "include": "#dwell" },
+				{ "include": "#gcode" },
+				{ "include": "#plc" },
+				{ "include": "#mcode" },
+				{ "include": "#selector" },
+				{ "include": "#param" },
+				{ "include": "#address" },
+				{ "include": "#axis" },
+				{ "include": "#operator" }
+			]
+		},
+		"evolved": {
+			"comment": "Riga evoluta !...! : delimitatori, salti, IF, EB, comandi ':' (M96 p.306-349)",
+			"begin": "!",
+			"beginCaptures": { "0": { "name": "keyword.control.gcode" } },
+			"end": "$",
+			"patterns": [
 				{
-					"name": "string.unquoted.gcode",
-					"begin": "M\\d",
-					"end": "\\d*"				}
-			]			
+					"comment": "Salto: GO rosa, destinazione (N1000, P10, S2...) blu",
+					"match": "(?<=[!;])\\s*(GO)\\s*((?:DNC|N|P|S)[^!;]*)",
+					"captures": {
+						"1": { "name": "keyword.control.gcode" },
+						"2": { "name": "variable.language.gcode" }
+					}
+				},
+				{
+					"name": "keyword.control.gcode",
+					"match": "(?<=[!;])\\s*(IF|EB|CP|PC|:[A-Z]+)"
+				},
+				{ "name": "keyword.control.gcode", "match": "!" },
+				{ "include": "#tokens" }
+			]
 		},
-		"entity": 
-		{
-			"patterns":
-			[{
-				"name": "entity.name.function.gcode",
-				"match": "\\b(giallo chiaro)\\b"
-			},
-			{
-				"name": "entity.name.tag.gcode",
-				"match": "\\b(blu)\\b"
-			},
-			{
-				"name": "entity.name.type.gcode",
-				"match": "\\b(verde acceso)\\b"
-			},
-			{
-				"name": "entity.other.attribute-name.gcode",
-				"match": "\\b(G4TT)\\b"
-			},
-			{
-				"name": "entity.other.inherited-class.gcode",
-				"match": "\\b(verde acceso)\\b"
-			}]
+		"array": {
+			"comment": "Array parametri PAR[ ] PRM[ ] PAL[ ] ... (M96 p.236-245)",
+			"name": "support.type.gcode",
+			"begin": "(?<![A-Z])(PAR|PAL|PLS|PPR|PPT|PLR|PLT|PRM|LOC|NXL|ZFP|MPA|SET|POS|SQA|SQB|PZL)\\s*\\[",
+			"end": "\\]",
+			"patterns": [ { "include": "#array" } ]
 		},
-		"invalid": 
-		{
-			"patterns": 
-			[{
-				"name": "invalid.gcode",
-				"match": "(?i)\\b(rosso case insensitive)\\b"
-			}]
+		"dwell": {
+			"comment": "G4 TT sosta: tutto come funzione G (M96 p.35)",
+			"name": "support.variable.gcode",
+			"match": "(?<![A-Z])G\\s*4\\s*TT(?:\\s*\\d+(?:[.,]\\d+)?)?"
 		},
-		"constant": 
-		{
-			"patterns": 
-			[{
-				"name": "constant.numeric.gcode",
-				"match": "\\b(verde chiaro usato)\\b"
-			},
-			{
-				"name": "constant.character.escape.gcode",
-				"begin": "MC\\d",
-				"end": "\\d*"
-			}]
+		"gcode": {
+			"comment": "Funzioni G (M96 p.25)",
+			"name": "support.variable.gcode",
+			"match": "(?<![A-Z])G\\s*\\d+(\\.\\d+)?"
 		},
-		"markup": 
-		{
-			"patterns": 
-			[{
-				"name": "markup.heading.gcode",
-				"match": "\\b(blu chiaro)\\b"
-
-			}]
+		"plc": {
+			"comment": "MA MB MC verso logica (M96 p.217)",
+			"name": "constant.character.escape.gcode",
+			"match": "(?<![A-Z])M[ABC]\\s*-?\\d+"
 		},
-		"storage": 
-		{
-			"patterns": 
-			[{
-				"name": "storage.gcode",
-				"match": "\\b(S|F|X|Y|Z|A|C|D|K|N|U|V|W|B|D|KB|KC|VA|VB|VC|VD|VE|VF)\\b"
-			}]
+		"mcode": {
+			"comment": "Funzioni M (M96 p.215)",
+			"name": "string.unquoted.gcode",
+			"match": "(?<![A-Z])M\\s*\\d+"
 		},
-		"support": 
-		{
-			"patterns": 
-			[{
-				"name": "support.class.gcode",
-				"match": "\\b(verdi acceso)\\b"
-			},
-			{
-				"name": "support.function.gcode",
-				"match": "\\b(giallo chiaro usato)\\b"
-			},
-			{
-				"name": "support.type.gcode",
-				"begin": "(ZFP|PRM|PAL|PAR)",
-				"end": "\\]"
-			},
-			{
-				"name": "support.variable.gcode",
-				"begin": "(G|KA|KB)\\d",
-				"end": "\\d*"
-			}]
+		"selector": {
+			"comment": "KA KB parametri di selezione",
+			"name": "support.variable.gcode",
+			"match": "(?<![A-Z])K[AB](?![A-Z])(?:\\s*-?\\d+(?:[.,]\\d+)?)?"
 		},
-		"variable": 
-		{
-			"patterns": 
-			[{
-				"name": "variable.language.gcode",
-				"begin": "(S|F|X|Y|Z|A|C|D|K|N|U|V|W|B|D)\\d",
-				"end": "\\d*"
-			},
-			{
-				"name": "variable.parameter.gcode",
-				"match": "\\b(azzurro usato)\\b"
-			}]
+		"param": {
+			"comment": "Parametri a 2 lettere (HA, TT, AM, LX...) con valore opzionale; esclusi operatori e parole chiave (M96 p.233-247)",
+			"match": "(?<![A-Z])(?!(?:PI|RQ|SN|CS|AT|IF|EB|CP|PC|DO|LN|MA|MB|MC)(?![A-Z]))([A-FH-MP-Z][A-Z])(?![A-Z])(?:(\\s*=?\\s*[-+]?)(\\d+(?:[.,]\\d+)?))?",
+			"captures": {
+				"1": { "name": "constant.numeric.gcode" },
+				"2": { "name": "keyword.control.operator.gcode" },
+				"3": { "name": "constant.numeric.gcode" }
+			}
+		},
+		"address": {
+			"comment": "Assi e indirizzi a una lettera con valore (M96 p.22, p.219)",
+			"match": "(?<![A-Z])(O[A-Z]|[A-FHIJLO-Z])(_\\d)?(\\s*=?\\s*[-+]?)(\\d+(?:[.,]\\d+)?)",
+			"captures": {
+				"1": { "name": "variable.language.gcode" },
+				"2": { "name": "variable.language.gcode" },
+				"3": { "name": "keyword.control.operator.gcode" },
+				"4": { "name": "variable.language.gcode" }
+			}
+		},
+		"axis": {
+			"comment": "Assi e indirizzi senza valore numerico (es. Z<ZFP[503]>)",
+			"name": "storage.gcode",
+			"match": "(?<![A-Z_])(O[A-Z]|[A-FHIJLO-Z])(_\\d)?(?![A-Z0-9_])"
+		},
+		"operator": {
+			"comment": "Segni e operatori",
+			"name": "keyword.control.operator.gcode",
+			"match": "[-+*/=<>]"
 		}
-	},
-	"scopeName": "source.gcode"
+	}
 }

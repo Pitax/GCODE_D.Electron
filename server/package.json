@@ -1,8 +1,8 @@
 {
 	"name": "gcode-server",
-	"description": "GCODE Language Server",
-	"version": "1.0.0",
-	"author": "Pitamorsi Francesco",
+	"description": "GCODE D.Electron - language server",
+	"version": "1.2.0",
+	"author": "Pitax",
 	"license": "MIT",
 	"engines": {
 		"node": "*"
@@ -12,8 +12,8 @@
 		"url": "https://github.com/Pitax/GCODE_D.Electron"
 	},
 	"dependencies": {
-		"vscode-languageserver": "^6.1.1",
-		"vscode-languageserver-textdocument": "^1.0.1"
+		"vscode-languageserver": "^9.0.1",
+		"vscode-languageserver-textdocument": "^1.0.16"
 	},
 	"scripts": {}
 }

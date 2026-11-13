@@ -1,43 +1,33 @@
 {
-    "comments": {
-        // symbol used for single line comment. Remove this entry if your language does not support line comments
-        "lineComment": "//",
-        "blockComment": [ "(", ")" ]
-
-    },
-    // symbols used as brackets
-    "brackets": 
-    [
-        ["{", "}"],
-        ["[", "]"],
-        ["(", ")"]
-    ],
-    // symbols that are auto closed when typing
-    "autoClosingPairs": 
-    [
-        ["{", "}"],
-        ["[", "]"],
-        ["(", ")"],
-        ["'", "'"]
-    ],
-    // symbols that can be used to surround a selection
-    "surroundingPairs": 
-    [
-        ["{", "}"],
-        ["[", "]"],
-        ["(", ")"],
-        ["\"", "\""],
-        ["'", "'"]
-    ],
-    // "folding": 
-    // {
-    //     "markers": {
-    //       "start": "^\\s*//\\s*#?--\\b",
-    //       "end": "^\\s*//\\s*#?--\\b"
-    //   },
-    "indentationRules": 
-    {
-        "increaseIndentPattern": "\\b(--IF|--DO|--LOOP)\\b",
-        "decreaseIndentPattern": "\\b(--END IF|--ELSEIF|--ELSE|--EXIT DO)\\b"
-    }
+	// Manuale Programmazione Z32 (M96) p.23-24: ';' a inizio riga e '( )' sono commenti; '//' è riga in ricerca blocco
+	"comments": {
+		"lineComment": ";",
+		"blockComment": [ "(", ")" ]
+	},
+	// '[ ]' indici array (PAR, PRM, PAL...), '( )' commenti/espressioni
+	"brackets": [
+		["[", "]"],
+		["(", ")"]
+	],
+	"autoClosingPairs": [
+		["[", "]"],
+		["(", ")"],
+		["\"", "\""]
+	],
+	"surroundingPairs": [
+		["[", "]"],
+		["(", ")"],
+		["\"", "\""]
+	],
+	// Istruzioni strutturate '--' (M96 p.353-368, Frese p.71-75)
+	"folding": {
+		"markers": {
+			"start": "^\\s*--\\s*(IF|DO|DEFINE)\\b",
+			"end": "^\\s*--\\s*(END\\s*IF|LOOP|END\\s*DEFINE)\\b"
+		}
+	},
+	"indentationRules": {
+		"increaseIndentPattern": "^\\s*--\\s*(IF|ELSE\\s*IF|ELSE|DO|DEFINE)\\b",
+		"decreaseIndentPattern": "^\\s*--\\s*(END\\s*IF|ELSE\\s*IF|ELSE|LOOP|END\\s*DEFINE)\\b"
+	}
 }

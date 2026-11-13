@@ -1,22 +1,20 @@
 {
-	"name": "gcode",
-	"description": "Gcode Edit part of a language server",
-	"author": "Pitamorsi Francesco",
+	"name": "gcode-client",
+	"description": "GCODE D.Electron - client",
+	"author": "Pitax",
 	"license": "MIT",
-	"version": "0.0.1",
-	"publisher": "vscode",
+	"version": "1.2.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Pitax/GCODE_D.Electron"
 	},
 	"engines": {
-		"vscode": "^1.43.0"
+		"vscode": "^1.82.0"
 	},
 	"dependencies": {
-		"vscode-languageclient": "^6.1.3"
+		"vscode-languageclient": "^9.0.1"
 	},
 	"devDependencies": {
-		"@types/vscode": "1.43.0",
-		"vscode-test": "^1.3.0"
+		"@types/vscode": "1.82.0"
 	}
 }

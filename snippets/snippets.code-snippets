@@ -1,9 +1,61 @@
 {
-	"SNIPPET": {
-		"prefix": "SNIPPET",
+	"--IF": {
+		"prefix": ["--IF", "IF"],
 		"body": [
-			"SNIPPET(${1:valore})"
+			"--IF ${1:condizione}",
+			"\t$0",
+			"--END IF"
 		],
-		"description": "Descrizione"
-		}
+		"description": "Blocco condizionale"
+	},
+	"--IF ELSE": {
+		"prefix": ["--IFELSE", "IFELSE"],
+		"body": [
+			"--IF ${1:condizione}",
+			"\t$2",
+			"--ELSE",
+			"\t$0",
+			"--END IF"
+		],
+		"description": "Blocco condizionale con alternativa"
+	},
+	"--DO LOOP": {
+		"prefix": ["--DO", "DO"],
+		"body": [
+			"--DO",
+			"\t$0",
+			"--LOOP ${1:IF condizione}"
+		],
+		"description": "Ciclo"
+	},
+	"--DEFINE S": {
+		"prefix": ["--DEFINE", "DEFINE"],
+		"body": [
+			"--DEFINE S${1:1}",
+			"\t$0",
+			"--END DEFINE"
+		],
+		"description": "Definizione subtemp"
+	},
+	"!GON": {
+		"prefix": ["!GON", "GON"],
+		"body": [
+			"!GON${1:numero}!"
+		],
+		"description": "Salto a riga N"
+	},
+	"!GOP": {
+		"prefix": ["!GOP", "GOP"],
+		"body": [
+			"!GOP${1:numero}!"
+		],
+		"description": "Chiamata sottoprogramma CMOS"
+	},
+	"G4TT": {
+		"prefix": "G4TT",
+		"body": [
+			"G4TT${1:secondi}"
+		],
+		"description": "Sosta"
+	}
 }

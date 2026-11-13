@@ -7,9 +7,8 @@ Simula alcune funzioni native dell'editor di Zeta
 - Snippet delle funzioni più comuni
 - Intellisense variabili CNC
 - Informazioni sulle funzioni più comuni tramite Hover
-- Sengalazione errore in caso di scrittura errata funzioni CNC
+- Segnalazione errore in caso di scrittura errata funzioni CNC
+- Riconoscimento automatico dei part-program senza estensione
 
 ## Versione
-0.0.1
-
-
+1.2.0

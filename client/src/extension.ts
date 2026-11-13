@@ -1,65 +1,74 @@
-/* --------------------------------------------------------------------------------------------
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License. See License.txt in the project root for license information.
- * ------------------------------------------------------------------------------------------ */
-
 import * as path from 'path';
-import { workspace, ExtensionContext } from 'vscode';
+import { workspace, window, languages, commands, ExtensionContext, TextDocument } from 'vscode';
 
 import {
 	LanguageClient,
 	LanguageClientOptions,
 	ServerOptions,
 	TransportKind
-} from 'vscode-languageclient';
+} from 'vscode-languageclient/node';
 
 let client: LanguageClient;
 
-export function activate(context: ExtensionContext) {
-	// The server is implemented in node
-	let serverModule = context.asAbsolutePath(
-		path.join('server', 'out', 'server.js')
-	);
-	// The debug options for the server
-	// --inspect=6009: runs the server in Node's Inspector mode so VS Code can attach to the server for debugging
-	let debugOptions = { execArgv: ['--nolazy', '--inspect=6009'] };
+// Riga tipica di un part-program Z32 (manuale M96)
+const rigaGcode = /^\s*(N\d|G\d|M\d|!|--\s*(IF|DO|LOOP|DEFINE)\b|:(OS|TL|PA)\b|%)/i;
 
-	// If the extension is launched in debug mode then the debug server options are used
-	// Otherwise the run options are used
-	let serverOptions: ServerOptions = {
+// File senza estensione dentro una cartella CMOS configurata (o sottocartella) oppure con contenuto GCODE
+function isGcode(doc: TextDocument): boolean {
+	if (doc.languageId !== 'plaintext' || doc.uri.scheme !== 'file' || path.extname(doc.fileName) !== '') {
+		return false;
+	}
+	const config = workspace.getConfiguration('gcodeDelectron');
+	const file = path.resolve(doc.fileName).toLowerCase();
+	if (config.get<string[]>('cartelleCMOS', []).some(c => file.startsWith(path.resolve(c).toLowerCase() + path.sep))) {
+		return true;
+	}
+	if (!config.get<boolean>('riconoscimentoContenuto', true)) {
+		return false;
+	}
+	let righe = 0;
+	for (let i = 0; i < Math.min(doc.lineCount, 50) && righe < 3; i++) {
+		if (rigaGcode.test(doc.lineAt(i).text)) {
+			righe++;
+		}
+	}
+	return righe >= 3;
+}
+
+function verifica(doc: TextDocument) {
+	if (isGcode(doc)) {
+		languages.setTextDocumentLanguage(doc, 'gcode');
+	}
+}
+
+export function activate(context: ExtensionContext) {
+	workspace.textDocuments.forEach(verifica);
+	context.subscriptions.push(
+		workspace.onDidOpenTextDocument(verifica),
+		commands.registerCommand('gcodeDelectron.impostaGcode', () => {
+			if (window.activeTextEditor) {
+				languages.setTextDocumentLanguage(window.activeTextEditor.document, 'gcode');
+			}
+		})
+	);
+
+	const serverModule = context.asAbsolutePath(path.join('server', 'out', 'server.js'));
+	const serverOptions: ServerOptions = {
 		run: { module: serverModule, transport: TransportKind.ipc },
 		debug: {
 			module: serverModule,
 			transport: TransportKind.ipc,
-			options: debugOptions
+			options: { execArgv: ['--nolazy', '--inspect=6009'] }
 		}
 	};
-
-	// Options to control the language client
-	let clientOptions: LanguageClientOptions = {
-		// Register the server for plain text documents
-		documentSelector: [{ scheme: 'file', language: 'gcode' }],
-		synchronize: {
-			// Notify the server about file changes to '.clientrc files contained in the workspace
-			fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
-		}
+	const clientOptions: LanguageClientOptions = {
+		documentSelector: [{ scheme: 'file', language: 'gcode' }]
 	};
 
-	// Create the language client and start the client.
-	client = new LanguageClient(
-		'languageServergcode',
-		'Language Server GCODE',
-		serverOptions,
-		clientOptions
-	);
-
-	// Start the client. This will also launch the server
+	client = new LanguageClient('languageServergcode', 'Language Server GCODE', serverOptions, clientOptions);
 	client.start();
 }
 
 export function deactivate(): Thenable<void> | undefined {
-	if (!client) {
-		return undefined;
-	}
-	return client.stop();
+	return client ? client.stop() : undefined;
 }
